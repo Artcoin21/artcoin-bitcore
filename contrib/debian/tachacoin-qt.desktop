@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Bitcoin Core
+Comment=Connect to the Tachacoin P2P Network
+Exec=tachacoin-qt %u
+Terminal=false
+Type=Application
+Icon=tachacoin128
+MimeType=x-scheme-handler/tachacoin;
+Categories=Office;Finance;

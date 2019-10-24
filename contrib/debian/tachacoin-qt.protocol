@@ -1,0 +1,11 @@
+[Protocol]
+exec=tachacoin-qt '%u'
+protocol=tachacoin
+input=none
+output=none
+helper=true
+listing=
+reading=false
+writing=false
+makedir=false
+deleting=false

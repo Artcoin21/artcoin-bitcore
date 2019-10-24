@@ -1,14 +1,14 @@
 *.tar.gz
 
 *.exe
-src/qtum-cli
-src/qtum-tx
-src/qtumd
-src/bench/bench_qtum
-src/qt/qtum-qt
-src/qt/test/test_qtum-qt
-src/test/test_qtum
-src/test/test_qtum_fuzzy
+src/tachacoin-cli
+src/tachacoin-tx
+src/tachacoind
+src/bench/bench_tachacoin
+src/qt/tachacoin-qt
+src/qt/test/test_tachacoin-qt
+src/test/test_tachacoin
+src/test/test_tachacoin_fuzzy
 
 # autoreconf
 Makefile.in

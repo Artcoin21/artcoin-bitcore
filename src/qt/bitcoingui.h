@@ -32,7 +32,7 @@ class HelpMessageDialog;
 class ModalOverlay;
 class TitleBar;
 class NavigationBar;
-class QtumVersionChecker;
+class TachacoinVersionChecker;
 
 class CWallet;
 
@@ -138,7 +138,7 @@ private:
     RPCConsole *rpcConsole;
     HelpMessageDialog *helpMessageDialog;
     ModalOverlay *modalOverlay;
-    QtumVersionChecker *qtumVersionChecker;
+    TachacoinVersionChecker *tachacoinVersionChecker;
     ModalOverlay *modalBackupOverlay;
 
     /** Keep track of previous number of blocks, to detect progress */
