@@ -23,7 +23,6 @@
 #include "txmempool.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-#include "utilmoneystr.h"
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
 #endif
@@ -350,7 +349,7 @@ UniValue getrawtransaction(const JSONRPCRequest& request)
     CTransactionRef tx;
     uint256 hashBlock;
 
-    //////////////////////////////////////////////////////// // tachacoin
+    //////////////////////////////////////////////////////// // tacha
     int nHeight = 0;
     int nConfirmations = 0;
     int nBlockTime = 0;
@@ -525,15 +524,8 @@ UniValue createrawtransaction(const JSONRPCRequest& request)
             "     ]\n"
             "2. \"outputs\"               (string, required) a json object with outputs\n"
             "    {\n"
-            "      \"address\": x.xxx,    (numeric or string, required) The key is the tachacoin address, the numeric value (can be string) is the " + CURRENCY_UNIT + " amount\n"
+            "      \"address\": x.xxx,    (numeric or string, required) The key is the tacha address, the numeric value (can be string) is the " + CURRENCY_UNIT + " amount\n"
             "      \"data\": \"hex\"      (string, required) The key is \"data\", the value is hex encoded data\n"
-            "      \"contract\":{\n"
-            "         \"contractAddress\":\"address\", (string, required) Valid contract address (valid hash160 hex data)\n"
-            "         \"data\":\"hex\",                (string, required) Hex data to add in the call output\n"
-            "         \"amount\":x.xxx,                (numeric, optional) Value in TACHACOIN to send with the call, should be a valid amount, default 0\n"
-            "         \"gasLimit\":x,                  (numeric, optional) The gas limit for the transaction\n"
-            "         \"gasPrice\":x.xxx               (numeric, optional) The gas price for the transaction\n"
-            "       } \n"
             "      ,...\n"
             "    }\n"
             "3. locktime                  (numeric, optional, default=0) Raw locktime. Non-0 value also locktime-activates inputs\n"
@@ -543,12 +535,8 @@ UniValue createrawtransaction(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\" \"{\\\"address\\\":0.01}\"")
             + HelpExampleCli("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\" \"{\\\"data\\\":\\\"00010203\\\"}\"")
-            + HelpExampleCli("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\" \"{\\\"contract\\\":{\\\"contractAddress\\\":\\\"mycontract\\\","
-                                                     "\\\"data\\\":\\\"00\\\", \\\"gasLimit\\\":250000, \\\"gasPrice\\\":0.00000040, \\\"amount\\\":0}}\"")
             + HelpExampleRpc("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\", \"{\\\"address\\\":0.01}\"")
             + HelpExampleRpc("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\", \"{\\\"data\\\":\\\"00010203\\\"}\"")
-            + HelpExampleRpc("createrawtransaction", "\"[{\\\"txid\\\":\\\"myid\\\",\\\"vout\\\":0}]\" \"{\\\"contract\\\":{\\\"contractAddress\\\":\\\"mycontract\\\","
-                                                     "\\\"data\\\":\\\"00\\\", \\\"gasLimit\\\":250000, \\\"gasPrice\\\":0.00000040, \\\"amount\\\":0}}\"")
         );
 
     RPCTypeCheck(request.params, boost::assign::list_of(UniValue::VARR)(UniValue::VOBJ)(UniValue::VNUM), true);
@@ -606,83 +594,10 @@ UniValue createrawtransaction(const JSONRPCRequest& request)
 
             CTxOut out(0, CScript() << OP_RETURN << data);
             rawTx.vout.push_back(out);
-        } else if (name_ == "contract") {
-            // Get the call object
-            UniValue Contract = sendTo[name_];
-            if(!Contract.isObject())
-                throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, need to be object: ")+name_);
-
-            // Get dgp gas limit and gas price
-            LOCK2(cs_main, pwalletMain->cs_wallet);
-            TachacoinDGP tachacoinDGP(globalState.get(), fGettingValuesDGP);
-            uint64_t blockGasLimit = tachacoinDGP.getBlockGasLimit(chainActive.Height());
-            uint64_t minGasPrice = CAmount(tachacoinDGP.getMinGasPrice(chainActive.Height()));
-            CAmount nGasPrice = (minGasPrice>DEFAULT_GAS_PRICE)?minGasPrice:DEFAULT_GAS_PRICE;
-
-            // Get the contract address
-            if(!Contract.exists("contractAddress") || !Contract["contractAddress"].isStr())
-                throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, contract address is mandatory."));
-
-            std::string contractaddress = Contract["contractAddress"].get_str();
-            if(contractaddress.size() != 40 || !CheckHex(contractaddress))
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Incorrect contract address");
-
-            dev::Address addrAccount(contractaddress);
-            if(!globalState->addressInUse(addrAccount))
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "contract address does not exist");
-
-            // Get the contract data
-            if(!Contract.exists("data") || !Contract["data"].isStr())
-                throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, contract data is mandatory."));
-
-            string datahex = Contract["data"].get_str();
-            if(datahex.size() % 2 != 0 || !CheckHex(datahex))
-                throw JSONRPCError(RPC_TYPE_ERROR, "Invalid data (data not hex)");
-
-            // Get amount
-            CAmount nAmount = 0;
-            if (Contract.exists("amount")){
-                nAmount = AmountFromValue(Contract["amount"]);
-                if (nAmount < 0)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for call contract");
-            }
-
-            // Get gas limit
-            uint64_t nGasLimit=DEFAULT_GAS_LIMIT_OP_SEND;
-            if (Contract.exists("gasLimit")){
-                nGasLimit = Contract["gasLimit"].get_int64();
-                if (nGasLimit > blockGasLimit)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasLimit (Maximum is: "+i64tostr(blockGasLimit)+")");
-                if (nGasLimit < MINIMUM_GAS_LIMIT)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasLimit (Minimum is: "+i64tostr(MINIMUM_GAS_LIMIT)+")");
-                if (nGasLimit <= 0)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasLimit");
-            }
-
-            // Get gas price
-            if (Contract.exists("gasPrice")){
-                UniValue uGasPrice = Contract["gasPrice"];
-                if(!ParseMoney(uGasPrice.getValStr(), nGasPrice))
-                {
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasPrice");
-                }
-                CAmount maxRpcGasPrice = GetArg("-rpcmaxgasprice", MAX_RPC_GAS_PRICE);
-                if (nGasPrice > (int64_t)maxRpcGasPrice)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasPrice, Maximum allowed in RPC calls is: "+FormatMoney(maxRpcGasPrice)+" (use -rpcmaxgasprice to change it)");
-                if (nGasPrice < (int64_t)minGasPrice)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasPrice (Minimum is: "+FormatMoney(minGasPrice)+")");
-                if (nGasPrice <= 0)
-                    throw JSONRPCError(RPC_TYPE_ERROR, "Invalid value for gasPrice");
-            }
-
-            // Add call contract output
-            CScript scriptPubKey = CScript() << CScriptNum(VersionVM::GetEVMDefault().toRaw()) << CScriptNum(nGasLimit) << CScriptNum(nGasPrice) << ParseHex(datahex) << ParseHex(contractaddress) << OP_CALL;
-            CTxOut out(nAmount, scriptPubKey);
-            rawTx.vout.push_back(out);
         } else {
             CBitcoinAddress address(name_);
             if (!address.IsValid())
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid Tachacoin address: ")+name_);
+                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid Tacha address: ")+name_);
 
             if (setAddress.count(address))
                 throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, duplicated address: ")+name_);
@@ -740,7 +655,7 @@ UniValue decoderawtransaction(const JSONRPCRequest& request)
             "         \"reqSigs\" : n,            (numeric) The required sigs\n"
             "         \"type\" : \"pubkeyhash\",  (string) The type, eg 'pubkeyhash'\n"
             "         \"addresses\" : [           (json array of string)\n"
-            "           \"Q2tvKAXCxZjSmdNbao16dKXC8tRWfcF5oc\"   (string) tachacoin address\n"
+            "           \"Q2tvKAXCxZjSmdNbao16dKXC8tRWfcF5oc\"   (string) tacha address\n"
             "           ,...\n"
             "         ]\n"
             "       }\n"
@@ -783,7 +698,7 @@ UniValue decodescript(const JSONRPCRequest& request)
             "  \"type\":\"type\", (string) The output type\n"
             "  \"reqSigs\": n,    (numeric) The required signatures\n"
             "  \"addresses\": [   (json array of string)\n"
-            "     \"address\"     (string) tachacoin address\n"
+            "     \"address\"     (string) tacha address\n"
             "     ,...\n"
             "  ],\n"
             "  \"p2sh\",\"address\" (string) address of P2SH script wrapping this redeem script (not returned if the script is already a P2SH).\n"
@@ -836,7 +751,7 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
             "signrawtransaction \"hexstring\" ( [{\"txid\":\"id\",\"vout\":n,\"scriptPubKey\":\"hex\",\"redeemScript\":\"hex\"},...] [\"privatekey1\",...] sighashtype )\n"
             "\nSign inputs for raw transaction (serialized, hex-encoded).\n"
             "The second optional argument (may be null) is an array of previous transaction outputs that\n"
-            "this transaction depends on but may not yet be in the blockchain.\n"
+            "this transaction depends on but may not yet be in the block chain.\n"
             "The third optional argument (may be null) is an array of base58-encoded private\n"
             "keys that, if given, will be the only keys used to sign the transaction.\n"
 #ifdef ENABLE_WALLET
@@ -1128,6 +1043,7 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
     CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
     const uint256& hashTx = tx->GetHash();
 
+    bool fLimitFree = false;
     CAmount nMaxRawTxFee = maxTxFee;
     if (request.params.size() > 1 && request.params[1].get_bool())
         nMaxRawTxFee = 0;
@@ -1143,8 +1059,7 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
         // push to local node and sync with wallets
         CValidationState state;
         bool fMissingInputs;
-        bool fLimitFree = true;
-        if (!AcceptToMemoryPool(mempool, state, std::move(tx), fLimitFree, &fMissingInputs, NULL, false, nMaxRawTxFee, true)) {
+        if (!AcceptToMemoryPool(mempool, state, std::move(tx), fLimitFree, &fMissingInputs, NULL, false, nMaxRawTxFee)) {
             if (state.IsInvalid()) {
                 throw JSONRPCError(RPC_TRANSACTION_REJECTED, strprintf("%i: %s", state.GetRejectCode(), state.GetRejectReason()));
             } else {
@@ -1155,7 +1070,7 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
             }
         }
     } else if (fHaveChain) {
-        throw JSONRPCError(RPC_TRANSACTION_ALREADY_IN_CHAIN, "transaction already in blockchain");
+        throw JSONRPCError(RPC_TRANSACTION_ALREADY_IN_CHAIN, "transaction already in block chain");
     }
     if(!g_connman)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
