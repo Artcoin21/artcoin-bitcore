@@ -240,8 +240,6 @@ void Shutdown()
         pcoinsdbview = NULL;
         delete pblocktree;
         pblocktree = NULL;
-        delete pstorageresult;
-        pstorageresult = NULL;
 	    delete globalState.release();
         globalSealEngine.reset();
     }
@@ -1468,7 +1466,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
-                delete pstorageresult;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
@@ -1476,9 +1473,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
 
                 if (fReindex) {
-                    boost::filesystem::path stateDir = GetDataDir() / "stateTachacoin";
-                    StorageResults storageRes(stateDir.string());
-                    storageRes.wipeResults();
                     pblocktree->WriteReindexing(true);
                     //If we're reindexing in prune mode, wipe away unusable block files and all undo data files
                     if (fPruneMode)
@@ -1510,9 +1504,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                 }
 
                 dev::eth::Ethash::init();
-
                 boost::filesystem::path tachacoinStateDir = GetDataDir() / "stateTachacoin";
-
                 bool fStatus = boost::filesystem::exists(tachacoinStateDir);
                 const std::string dirTachacoin(tachacoinStateDir.string());
                 const dev::h256 hashDB(dev::sha3(dev::rlp("")));
@@ -1520,8 +1512,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                 globalState = std::unique_ptr<TachacoinState>(new TachacoinState(dev::u256(0), TachacoinState::openDB(dirTachacoin, hashDB, dev::WithExisting::Trust), dirTachacoin, existsTachacoinstate));
                 dev::eth::ChainParams cp((dev::eth::genesisInfo(dev::eth::Network::tachacoinMainNetwork)));
                 globalSealEngine = std::unique_ptr<dev::eth::SealEngineFace>(cp.createSealEngine());
-
-                pstorageresult = new StorageResults(tachacoinStateDir.string());
 
                 if(chainActive.Tip() != NULL){
                     globalState->setRoot(uintToh256(chainActive.Tip()->hashStateRoot));
@@ -1563,7 +1553,9 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 if (!GetBoolArg("-logevents", DEFAULT_LOGEVENTS))
                 {
-                    pstorageresult->wipeResults();
+                    boost::filesystem::path stateDir = GetDataDir() / "stateTachacoin";
+                    StorageResults storageRes(stateDir.string());
+                    storageRes.wipeResults();
                     pblocktree->WipeHeightIndex();
                     fLogEvents = false;
                     pblocktree->WriteFlag("logevents", fLogEvents);
