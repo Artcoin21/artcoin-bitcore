@@ -109,10 +109,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 999999999999ULL;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000000000000035b3acb76"); // tachacoin
+        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000008b03dbbb1be806b"); // tachacoin
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x2e60684e37fa47617a169d5611b51e1549cacfec3db2f3dc9d59e51956278c52"); 
+        consensus.defaultAssumeValid = uint256S("0x299503e50259f0836bc6a0c0234fd84d13d61d3e33558de452d4a516f0a5fa2c"); 
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -152,17 +152,17 @@ public:
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
             ( 0, uint256S("000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"))
-            ( 5000, uint256S("00002e5fcab69da8e9e3a5688cecd755de4e354af68a21269fb8c2282c7497e4")) //last PoW block
-            ( 5001, uint256S("419144be954391e03aa2baf7aed8d49f839dcb8e2e8a72a24a5420b66b2bb87f"))
-            ( 5003, uint256S("2e60684e37fa47617a169d5611b51e1549cacfec3db2f3dc9d59e51956278c52"))
+            ( 5000, uint256S("0000a11a7f5d273df5148f58bc07fec2e7dd528590a6846adb1009ea75af294b")) //last PoW block
+            ( 5001, uint256S("8906950299e263027fc20f4d01516115dbe781158690913ebd31dd0630d2d74a"))
+            ( 5075, uint256S("299503e50259f0836bc6a0c0234fd84d13d61d3e33558de452d4a516f0a5fa2c"))
         };
 
         chainTxData = ChainTxData{
             // Data as of block a1bab8db27f26952ce94fff6563931943554e36fc3a23f99cc8513270d685b2c (height 92662)
-            1571836560, // * UNIX timestamp of last known number of transactions
-            5007, // * total number of transactions between genesis and that timestamp
+            1572199888, // * UNIX timestamp of last known number of transactions
+            5151, // * total number of transactions between genesis and that timestamp
                             //   (the tx=... number in the SetBestChain debug.log lines)
-            0.9991 // * estimated number of transactions per second after that timestamp
+            0.97 // * estimated number of transactions per second after that timestamp
         };
         consensus.nLastPOWBlock = 5000;
         consensus.nMPoSRewardRecipients = 10;
